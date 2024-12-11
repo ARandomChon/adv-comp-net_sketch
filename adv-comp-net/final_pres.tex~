@@ -1,0 +1,274 @@
+\documentclass{beamer}
+
+\usepackage{amsmath,amssymb}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage{tikz}
+\usepackage{graphicx}
+\graphicspath{{./prog/}}
+\usepackage{svg}
+%\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+%    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+%\usepackage{bibtex}
+
+\usetheme{Berlin}
+\usecolortheme{beaver}
+\setbeamertemplate{page number in head/foot}[totalframenumber]
+
+% title information
+\title{In-Switch Traffic Distribution Approximation}
+\author{Sean Bergen}
+\institute{Arizona State University}
+\date{2024}
+
+
+\begin{document}
+
+% title frame
+\frame{\titlepage}
+
+% overview/agenda frame
+\begin{frame}
+  \frametitle{Overview}
+  \tableofcontents
+\end{frame}
+
+\section{Motivation}
+% motivation
+\begin{frame}
+  \frametitle{Motivation}
+  \begin{itemize}
+    \item <2-> Categorize traffic rates relative to each other
+    \item <3-> Keep operators of algorithm simple to allow for implementation in P4
+  \end{itemize}  
+\end{frame}
+
+% background info
+\section{Background Information}
+\begin{frame}
+  \frametitle{Background Information}
+  \begin{itemize}
+    \item Streaming Algorithms
+    \item Sketches
+    \item Stochastics
+  \end{itemize}
+\end{frame}
+
+
+% streaming algs
+\subsection{Streaming Algorithms and Sketches}
+\begin{frame}
+  \frametitle{Streaming Algorithms}
+  \begin{itemize}
+    \item<2-> Formalized by N. Alon et al\cite{noga}
+    \item<3-> Algorithm operates``on-line'' on a stream of data
+    \item<4-> Stream usually only examined once
+  \end{itemize}
+\end{frame}
+
+% sketches
+\begin{frame}
+  \frametitle{Sketches}
+  \begin{itemize}
+    \item What if we want to examine stream history as part of the algorithm?
+    \item<2-> Probabilistic data structures, highly compressed\cite{sketch}
+    \item<3-> Often used alongside streaming algorithms
+    \item<4-> Count-Min Sketch\cite{cms}
+  \end{itemize}
+\end{frame}
+
+% stochastics
+\subsection{A (Brief) Introduction to Stochastics}
+\begin{frame}
+  \frametitle{Random Variables and Stochastic Processes}
+  \begin{itemize}
+    \item<2-> Random variable $X$ produces events from universe $U$
+    \item<3-> Stochastic Process $\rightarrow$ Observing $X$ over time
+    \item<4-> A fair coin vs a sequence of coin flips
+  \end{itemize}
+\end{frame}
+
+% original idea
+% \section{The Model}
+% \begin{frame}
+%   \frametitle{Original Idea for Model}
+%   \begin{itemize}
+%     \item<2-> Use formalism of STPN
+%     \item<3-> Each packet type fires independently according to its own Poisson distribution
+%     \end{itemize}
+% \end{frame}
+
+% % problem with original idea
+% \begin{frame}
+%   \frametitle{Problems with STPNs}
+%   \begin{itemize}
+%     \item<2-> Hard to analyze, requires heavy simulation or heavy computation
+%     \item<3-> Time dynamics cause issues
+%     \item<4-> STPN doesn't distinguish between values on markers
+%   \end{itemize}
+% \end{frame}
+
+% current model
+\section{Model}
+\begin{frame}
+  \frametitle{Model}
+  \begin{itemize}
+    \item<2-> Discrete time, r.v. $X$, switch $S$
+    \item<3-> Every timestep $X$ chooses some packet $\sigma$ across all possible ones it could choose $\Omega$ from some distribution
+    \item<4-> $X$ forms an input stream of observed packets that $S$ reads from
+  \end{itemize}
+\end{frame}
+
+% why this model
+% \begin{frame}
+%   \frametitle{Why this Model?}
+%   \begin{itemize}
+%     \item<2-> Lose time dynamics, but retain ordering
+%     \item<3-> Less complicated, easier to analyze
+%     \item<4-> Less operations switch performs
+%   \end{itemize}
+% \end{frame}
+
+\section{Sketch}
+% sketch
+\begin{frame}
+  \frametitle{Sketch}
+  \begin{itemize}
+    \item<2-> Packets having closer group numbers means closer rates
+    \item<3-> Lower group number means higher rate, inspiration from power laws and Zipf's Law
+    \end{itemize}
+    \uncover<4->{
+  \begin{tabular}{|| c | c | c ||}
+    \hline
+    Packet Type & Buffer & Group \\
+    \hline
+    $\sigma_0$ & 0 & 19 \\
+    $\sigma_1$ & 0 & 20 \\
+    $\sigma_2$ & 1 & 13 \\
+    $\sigma_3$ & 2 & 19 \\
+    $\sigma_4$ & 1 & 19 \\
+    $\sigma_5$ & 0 & 16 \\
+    \hline
+  \end{tabular}}
+\end{frame}
+
+\section{Algorithm}
+% slide
+\begin{frame}
+  \frametitle{Streaming Algorithm}
+  \begin{algorithm}[H]
+    \tiny
+    \caption{$\mathcal{A}$}
+    \begin{algorithmic}[1]
+      \State $n \gets \mathbb{N}$ \Comment{$n$ is window size}
+      \State $m \gets \mathbb{N}, m < n$ \Comment{$m$ is max group value}
+      \State Sketch $s$ is empty initially
+      \While{Stream not empty}
+        \For{$i = 0; i < n; i++$}
+          \State Read next packet $p$, $\sigma_p \gets$ ``type''($p$) \Comment{Type could be srcIP, dstIP, ...}
+          \If {$\sigma_p \not\in s$}
+            \State Add $\langle \sigma_p, 1, m  \rangle$ to $s$ \Comment{$\sigma_p$ acts as a key to $s$}
+            \Else
+            \State $s[\sigma_p]$ buffer + 1, $s[\sigma_p]$ group $= max(1,$ group - 1)
+          \EndIf
+          \For{All other $\sigma \neq \sigma_p \in s$}
+            \State $s[\sigma]$ buffer - 1
+            \If{ $s[\sigma]$ buffer $< 0$}
+              \State $s[\sigma]$ buffer = 0, $s[\sigma]$ group = $min(m,$ group + 1)
+            \EndIf
+          \EndFor
+        \EndFor
+        \State Send/Save/Process $s$, then clear for next window  
+      \EndWhile
+    \end{algorithmic}
+  \end{algorithm}
+\end{frame}
+
+% slide
+\section{Experiment Design}
+\begin{frame}
+  \frametitle{Experiment Design}
+  \begin{itemize}
+    \item<2-> Generated a stream of 8,000 random packets, 6 different $\sigma$, $n = 40, m = 20$
+    \item<3-> Probability distribution over $\sigma$ was $[0.1,0.2,0.4,0.05,0.15,0.1]$
+    \item<4-> Saved sketch for each of the 200 windows
+  \end{itemize}
+\end{frame}
+
+% start of results slide
+\section{Results}
+\subsection{Theory}
+\begin{frame}
+  \frametitle{Interesting Theoretical Results}
+  \begin{theorem}<2->
+    The maximum number of different $\sigma$ that can get to group 1 for a given $n, m$ is $\lfloor \log \left ( \frac{n}{m} \right ) \rfloor + 1, n,m \in \mathbb{N}, n > m$
+  \end{theorem}
+  \begin{theorem}<3->
+    A (loose) lower bound for the number of different $\sigma$ before at least 1 $\sigma$ is guaranteed to be at group $m$ is $\lfloor \frac{n}{2} \rfloor + 1$
+  \end{theorem}
+  
+  \begin{block}{Remark}<4->
+    For $m = 2$, there is a tight bound where if the number of different $\sigma$ is $\geq \lfloor \log \left ( \frac{n}{m} \right ) \rfloor + 2$ then there will always be at least $\sigma$ in group $m$
+  \end{block}
+\end{frame}
+
+% slide
+\subsection{Experimental}
+\begin{frame}
+  \frametitle{Experimental Results}
+  \begin{figure}
+    \includesvg[height=0.8\textheight]{./prog/plot}
+    \end{figure}
+\end{frame}
+
+% slide
+\section{Future Work}
+\begin{frame}
+  \frametitle{Future Work and Open Questions}
+  \begin{itemize}
+    \item Tighter bound on interval before group $m$ packets are guaranteed
+    \item P4 implementation of sketch that chooses $\sigma$ as srcIP (in progress)
+    \item Adding time dynamics with minimal increase to computational complexity
+    \item Determining sweet spot for $m, n$ in relation to each other
+  \end{itemize}
+\end{frame}
+
+% references slide here
+\section{References}
+\begin{frame}
+  \tiny
+  \frametitle{References}
+  \bibliographystyle{unsrt}
+  \bibliography{refs}
+\end{frame}
+
+
+% start of appendix here
+% slide
+\section{Appendix}
+\begin{frame}
+  \frametitle{Proof for Upper Bound on Group 1 Packets}
+  To prove this, we work backwards from the last $\sigma$ to reach group 1 back to the first one
+  \begin{itemize}
+    \item <2-> $\sigma_1$ needs $m - 1$ packets to get to group 1
+    \item <3-> $\sigma_2$ can also only need $m - 1$ packets and end with a buffer of 0
+    \item <4-> $\sigma_3$ now needs $2(m - 1)$ packets to end with a buffer of 0 ...
+  \end{itemize}
+  \uncover<5->{This can be generalized to the following equation:}
+  \uncover<5->{\begin{align*}
+                 &\sum_{i=0} 2^i \cdot (m - 1) \leq n - (m - 1) \\
+                 & = \lfloor \log \left( \frac{n}{m - 1} \right) \rfloor + 1
+                \end{align*}}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Proof for Lower Bound on Group $m$ Packets}
+  In order for no packets to be at group $m$, every $\sigma$ must appear more than once. \\
+
+  \uncover<2->{By Pigeonhole principle, if there are $\lfloor n/2 \rfloor + 1$ different $\sigma$ within a window of length $n$, then at least one of them cannot have appeared more than once, so at least one must be in group $m$}
+
+  \uncover<3-> {Can we do better?  Yes, this is an extremely loose bound, my intuition is that the lower bound before $m$ is guaranteed is also logarithmic because of the buffers of each $\sigma$ that we add in a window}
+\end{frame}
+
+
+\end{document}

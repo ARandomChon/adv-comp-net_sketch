@@ -1,0 +1,18 @@
+\begin{thebibliography}{1}
+
+\bibitem{noga}
+Noga Alon, Yossi Matias, and Mario Szegedy.
+\newblock The space complexity of approximating the frequency moments.
+\newblock In {\em Proceedings of the Twenty-Eighth Annual ACM Symposium on
+  Theory of Computing}, STOC '96, page 20–29, New York, NY, USA, 1996.
+  Association for Computing Machinery.
+
+\bibitem{sketch}
+Jelani Nelson.
+\newblock Notes on sketching and streaming, 2016.
+
+\bibitem{cms}
+Graham Cormode.
+\newblock Count-min sketch., 2009.
+
+\end{thebibliography}

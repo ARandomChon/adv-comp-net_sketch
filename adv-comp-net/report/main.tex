@@ -1,0 +1,318 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{circuitikz}
+\usepackage{graphicx}
+\usepackage{url}
+\graphicspath{{./prog/}}
+\usepackage{svg}
+\setcounter{MaxMatrixCols}{12}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\title{In-Switch Traffic Distribution Approximation}
+
+\author{\IEEEauthorblockN{Sean Bergen}
+\IEEEauthorblockA{\textit{School of Computing and Augmented Intelligence} \\
+\textit{The Biodesign Institute Center for Biocomputing, Security and Society} \\
+\textit{Arizona State University}\\
+December 2024}}
+
+\begin{document}
+
+\maketitle
+
+% abstract
+\textbf{ABSTRACT: This project aims to design a streaming algorithm which can separate traffic into different ``classes" equating different traffic rates.  This is done in a way that uses minimally complex operators so that it can be later implemented at the switch level in the P4 language\cite{p4}.  With this project, results cover both initial bounds on the accuracy of the measurements are given, as well as results from simulation of the streaming algorithm, although there is room for a tighter analysis.}
+
+%introduction
+\section{Introduction}
+Measuring internet traffic rates is a fundamental problem in computer networking.  With the increase in the volume of internet users as well as real time services, understanding the current telemetry of a network has only become more important.  While this would be expensive for a switch to compute exactly, we can make use of ideas from theoretical computer science to approximate network traffic distributions in real-time.
+
+In particular, we can build up this approximation over time through the use of a sketch while using minimally complex operators.  The result of this is a summary that divides traffic into different groups depending on traffic rates, and is something that can also be modeled as a Markov process.
+
+% background information
+\section{Background Information}
+Streaming algorithms as a concept are commonly attributed to Alon et al.\cite{noga} because of their formalization of them in 1996, although problems relating to them have been studied for a longer amount of time.  The basic premise behind a streaming algorithm is that in execution of the algorithm, a machine is reading data from a stream or sequence, and has a limit on the number of times it is allowed to read any particular bit of the stream (typically limited to a single pass).  Because of this way of processing data as it comes in, using them for real-time network statistics is a natural fit.
+
+While a streaming algorithm may not be able to see data that it hasn't encountered yet, it does have the capability to remember some amount of past data that it has seen.  If the amount of space that a machine had were unbounded like in the case of an ideal Turing Machine's infinite tape, it would be able to perfectly remember everything it had seen up to some point in time.
+
+Unfortunately, machines do not in general have infinite space, and so when running a streaming algorithm over a sufficiently long period of time, it is no longer possible to keep a perfect record.  For this, there is a specialized data structure that can be made use of called a \textit{sketch}, which acts as a highly compressed and approximate snapshot of data.  In this way, rather than a machine using some larger amount of space for an algorithm, such as exponential space, the size of a sketch can be bounded to some more convenient level of space, such as $O(\log n)$, allowing the algorithm to scale in a more efficient way.  The space saved
+
+In order to model a large amount of network traffic, the process of packets passing through a switch is captured by a stochastic process.  Stochastic processes involve observing the events of one or more random variables produce over a period of time.  While network traffic is more commonly modeled through the use of Poisson distributions, in this project it is most important to capture the random dynamics that are present in the ordering of packets rather than their specific timing dynamics.  For this reason, the stochastic process used here is a single random variable $X$ that generates a stream of packets, with each type of packet being chosen at each index of the stream according to some probability distribution. 
+
+Programming Protocol-Independent Packet Processors\cite{p4} switches allow for new routing protocols and in-switch algorithms to be implemented and tested, either in a software switch within the behavioral model version 2 (bmv2) or on hardware, such as Barefoot Tofino switches.  While P4 does allow for switches to perform more computationally complex tasks than just the forwarding of packets, there are some limitations to the operations a P4 program can use.  As an example, neither looping constructs nor division are directly allowed within programs.  For this purpose, the goal of this project was both to simplify the modeling assumptions of traffic, and the operators involved in the algorithm.
+
+Although it is true that time dynamics could be added to the model for when each packet appears relative to each other, this introduces several complications, such as breaking ties when multiple Poisson distributions ``fire'' at the same time, as well as increasing the computational power a switch would need by having to track elapsed time.
+
+% related work
+\section{Related Work}
+Using sketches to compute statistics in real time over a stream is not a new idea;  The classic excample of this, Count-Min Sketches\cite{cms}, approximate the number of times a particular event has occurred.  This is done through the use of hashing a particular event into a count, producing an upper bound on the amount of times the event happened.  It is an upper bound because hash collisions may cause different events to map into the same counter.
+
+In-switch statistics are also not a new idea;  A recent example of this is in the paper ``Stats 101 in P4'' by Gao et al.\cite{stats101}, which performs anomaly detection on the appearances of packets over windows of time.  This is done through a table pushed into the switch that specifies the distribution of packets, and through computing the standard deviation over a window of time by using a clever bit-trick.
+
+Several works have combined the idea of using sketches and P4 as well; Hernandez et al.\cite{count-min} implemented and evaluated the performance of the above mentioned Count-Min Sketches within P4.  In a completely different direction, Gu et al.\cite{per-flow} designed and evaluated a sketching mechanism that split itself over several switches within a network, forming something of a distributed sketch.
+
+In contrast, this work aims to group traffic together and approximate the rate which a traffic is being sent at.
+
+% project description
+\section{Project Description}
+This project aims to develop a novel sketching algorithm which compares traffic over windows of time and forms groups of high and low rate traffic.  This is approached from the view of a switch that is observing a stream of packets, and as such the goals of the project are not only to separate packets, but to do so in a way that is not computationally expensive so as not to adversely impact the throughput of the switch.
+
+The project is modeled as follows: there is some random process $X$ which generates a packet of some type according to its probability distribution at each timestep.  The output of $X$ over time is treated as the stream of packets that the switch reads in.  The switch will then update its internal sketch according to the next packet it reads in from $X$.  In this context, \textit{packet type} could refer to any quality the switch can reasonably filter packets on, and is meaningful to the switch.  Examples could include applying a hash function to source or destination IP addresses, or the source and destination IP either individually or as an ordered pair.
+
+Due to time constraints, this was simulated using Python.  Within the python program, there are two different sketches that the switch maintains, a \textit{per-window} sketch and a \textit{full-stream} sketch.  The purpose of maintaining both sketches from a theory perspective is to check agreement of rates for different packet types.  In particular, large disagreements of rates for a particular packet type over some window of windows could indicate a change in distribution, which would allow the switch to correct to the new distribution faster than just maintaining a sketch over the full stream.
+
+\section{Sketches and the Streaming Algorithm}
+In the design of the sketch, the goal is to have packet types be assigned to a group number which contains packets with similar rates.  In addition, the goal is that when the difference between two different packet type's group numbers are small, they are more likely to have similar or closer rates, and when this difference grows larger, it becomes more likely that one has a comparatively higher rate than the other.
+
+To this end, the sketch tracks not only a group number for each packet type, but also a ``buffer''.  The purpose of the buffer is to act as a heuristic that captures both how much a packet has been seen within a window (or the whole stream), and gives an indication of how long since it has been seen.  When a packet is seen, we add to the buffer, and when a different packet type is seen we subtract from it.
+
+In Algorithm 1 ($\mathcal{A}$), it should be noted that we adjust the group number of each packet type up or down according to this buffer;  In particular, we increase the group number when this buffer reaches 0 (and reset it afterwards), and we decrease the group number each time we see a packet.  This has the effect of requiring that twice as many packets must be observed to drop a particular group down to the original group it is initialized with.  Note also that we denote higher rate traffic by a lower integer group number, this is done to give us an approximate ordering of rates by packet type, as well as because this project was inspired by power laws.
+
+ \begin{algorithm}
+    \caption{$\mathcal{A}$}
+    \small
+    \begin{algorithmic}[1]
+      \State $n \gets \mathbb{N}\cup\{\infty\}$ \Comment{$n$ is window size, $\infty$ for full-stream sketch}
+      \State $m \gets \mathbb{N}, m < n$ \Comment{$m$ is max group value}
+      \State Sketch $s$ is empty initially
+      \While{Stream not empty}
+        \For{$i = 0; i < n; i++$} \Comment{For full-stream, we skip tracking $i$}
+          \State Read next packet $p$, $\sigma_p \gets$ ``type''($p$) \Comment{Type could be srcIP, dstIP, ...}
+          \If {$\sigma_p \not\in s$}
+            \State Add $\langle \sigma_p, 1, m  \rangle$ to $s$ \Comment{$\sigma_p$ acts as a key to $s$}
+            \Else
+            \State $s[\sigma_p]$ buffer + 1, $s[\sigma_p]$ group $= max(1,$ group - 1)
+          \EndIf
+          \For{All other $\sigma \neq \sigma_p \in s$}
+            \State $s[\sigma]$ buffer - 1
+            \If{ $s[\sigma]$ buffer $< 0$}
+              \State $s[\sigma]$ buffer = 1, $s[\sigma]$ group = $min(m,$ group + 1)
+            \EndIf
+          \EndFor
+        \EndFor
+        \State Send/Save/Process $s$, then clear for next window  
+      \EndWhile
+    \end{algorithmic}
+  \end{algorithm}
+
+To the best of my knowledge, this does not appear to have been done in the literature.
+
+% experimental setup - 
+\section{Experimental Setup}
+In order to observe the long term behavior of the streaming algorithm and the sketch, I randomly generated a 8,000 long sequence, where the integers 0 through 5 correspond to different ``types'' of packets that the switch would read and separate traffic into.  The probability distribution for each of these classes is showing below:
+\begin{align}
+ &\{0.1,0.2,0.4,0.05,0.15,0.1\}
+ \end{align}
+I then also decided on a window length of 40, and a maximum group number of 20.
+
+These numbers were chosen to give results in the form of 200 different window
+results as well as having a large variance in the probabilities of each packet
+type being chosen.
+
+% results
+\section{Results}
+The results from simulation are grouped into two different categories, theory and experimental.  In the theory section, interesting properties of the sketch and guarantees about the algorithm are discussed.  In the experimental section, the sketch is evaluated based on the setup detailed in \textit{Experimental Setup}
+
+\subsection{Theoretical Results}
+\begin{theorem}
+    The maximum number of different $\sigma$ that can get to group 1 for a given $n \neq \infty, m$ is $\lfloor \log \left ( \frac{n}{m} \right ) \rfloor + 1, n,m \in \mathbb{N}, n > m$
+  \end{theorem}
+
+\begin{proof}
+To prove this, we work backwards from the last $\sigma$ to reach group 1 back to the first one
+  \begin{itemize}
+    \item $\sigma_1$ needs $m - 1$ packets to get to group 1
+    \item $\sigma_2$ can also only need $m - 1$ packets and end with a buffer of 0
+    \item $\sigma_3$ now needs $2(m - 1)$ packets to end with a buffer of 0 ...
+  \end{itemize}
+  This can be generalized to the following inequality:
+  \begin{align}
+                 &\sum_{i=0} 2^i \cdot (m - 1) \leq n - (m - 1)
+  \end{align}
+1 + the largest $i$ that we can go up to while the sum remains below $n$ is the
+most different packet types that can fit within a window of size $n$ and reach group 1.  This is bounded by
+\begin{align}
+& = \lfloor \log \left( \frac{n}{m - 1} \right) \rfloor + 1
+\end{align}
+\end{proof}
+
+\begin{theorem}
+A (loose) lower bound for the number of different $\sigma$ before at least 1 $\sigma$ is guaranteed to be at group $m$ for a non-infinite size window $n$ is $\lfloor \frac{n}{2} \rfloor + 1$
+\end{theorem}
+
+\begin{proof}
+In order for no packets to be at group $m$, every $\sigma$ must appear more than once. \\
+
+By Pigeonhole principle, if there are $\lfloor n/2 \rfloor + 1$ different $\sigma$ within a window of length $n$, then at least one of them cannot have appeared more than once, so at least one must be in group $m$
+\end{proof}
+
+Can we do better?  Yes, this is an extremely loose bound.  I am convinced that the bound for minimum different $\sigma$ before one must be group $m$ is also logarithmic \textit{because} of the buffers for each $\sigma$, though it is more complicated to show.  This is in part because the amount of other packets needed before any $\sigma$ falls to $m$ \textit{depends} on $m$.
+
+The construction of the sketches can also be converted to a Markov Chain.  Consider the following case where there is a window size of 5, and a maximum group value of 3.
+The state of each packet within the sketch can be captured by the markov chain shown in
+figure 1.  Here, we see states that range from ``the packet type has not yet been observed" ($\emptyset$), and have enumerated all reachable states by group number and the current value of the buffer.  (Note that row names are in the same order as
+column names).
+
+\begin{figure}
+    \caption{Markov Chain for state of packet type in Sketch}
+    \centering
+    \label{fig:enter-label}
+    \begin{circuitikz}
+    
+\draw  (4.25,13.75) circle (0.5cm);
+\node at (4.75,13.25) {};
+\draw  (5.5,12.5) circle (0.5cm);
+\draw  (5.5,11.25) circle (0.5cm);
+\draw  (6.75,12.5) circle (0.5cm);
+\draw  (6.75,11.25) circle (0.5cm);
+\draw  (8,12.5) circle (0.5cm);
+\draw  (8,11.25) circle (0.5cm);
+\draw  (6.75,10) circle (0.5cm);
+\draw  (8,10) circle (0.5cm);
+\draw  (8,8.75) circle (0.5cm);
+\draw  (8,7.5) circle (0.5cm);
+\node  at (4.25,13.75) {$\emptyset$};
+\node  at (5.5,12.5) {3,0};
+\node  at (6.75,12.5) {2,0};
+\node  at (8,12.5) {1,0};
+\node  at (5.5,11.25) {3,1};
+\node  at (6.75,11.25) {2,1};
+\node  at (8,11.25) {1,1};
+\node  at (6.75,10) {2,2};
+\node  at (8,10) {1,2};
+\node  at (8,8.75) {1,3};
+\node  at (8,7.5) {1,4};
+\draw  (8,6.25) circle (0.5cm);
+\node  at (8,6.25) {1,5};
+\draw [->, >=Stealth] (5,12.25) -- (5,11.5);
+\draw [->, >=Stealth] (5.75,10.75) -- (6.25,10.25);
+\draw [->, >=Stealth] (7,9.5) -- (7.5,9);
+\draw [->, >=Stealth] (7.5,8.5) -- (7.5,7.75);
+\draw [->, >=Stealth] (7.5,7.25) -- (7.5,6.5);
+\draw [->, >=Stealth] (8.5,7.75) -- (8.5,8.5);
+\draw [->, >=Stealth] (8.5,9) -- (8.5,9.75);
+\draw [->, >=Stealth] (8.5,10.25) -- (8.5,11);
+\draw [->, >=Stealth] (8.5,11.5) -- (8.5,12.25);
+\draw [->, >=Stealth] (7.5,12.25) -- (7,11.75);
+\draw [->, >=Stealth] (7,10.75) -- (7.5,10.25);
+\draw [->, >=Stealth] (7,12) -- (7.5,11.5);
+\draw [->, >=Stealth] (5.75,12) -- (6.25,11.5);
+\draw [->, >=Stealth] (6.25,12.25) -- (5.75,11.75);
+\draw [->, >=Stealth] (4.5,13.25) -- (5.25,11.75);
+\draw [->, >=Stealth] (6,11.25) -- (6,12.25);
+\draw [->, >=Stealth] (7.25,10) -- (7.25,11);
+\draw [->, >=Stealth] (7.25,11.5) -- (7.25,12.25);
+\draw [->, >=Stealth] (7.5,11) -- (7.5,10.25);
+\draw [->, >=Stealth] (7.5,12.25) -- (7.5,11.5);
+\draw [->, >=Stealth] (7.5,9.75) -- (7.5,9);
+\end{circuitikz}
+\end{figure}
+
+Since this is a Markov chain, we can represent it as a matrix, with each row denoting a starting state, each column denoting an ending state for a move, and each $i,j$ value
+giving the probability that a move from state $i$ to $j$ happens.  In this case, each
+packet will move through this Markov chain according to the value that it is chosen,
+since the rate is the probability that $X$ will choose it to be the next packet.
+
+We can then take advantage of a property of the matrix form of Markov chains; When you
+raise that matrix to the $n$\textsuperscript{th} power, you gain the probability distribution for starting at state $i$ and ending at state $j$ after $n$ moves.
+
+Consider the case where we have some $\sigma$ that has a probability 0.4 of being chosen at each point of packet generation.  We obtain the following matrix:
+
+\begin{align}
+\setlength{\arraycolsep}{2.5pt}
+\scriptsize
+\begin{bmatrix}
+  \emptyset & (3,0) & (3,1) & (2,0) & (2,1) & (2,2) & (1,0) & (1,1) & (1,2) & (1,3) & (1,4) & (1,5) \\
+0.6 & 0   & 0.4 & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   \\
+0   & 0   & 0.6 & 0   & 0.4 & 0   & 0   & 0   & 0   & 0   & 0   & 0   \\
+0   & 0.6 & 0   & 0   & 0   & 0.4 & 0   & 0   & 0   & 0   & 0   & 0   \\
+0   & 0   & 0.6 & 0   & 0   & 0   & 0   & 0.4 & 0   & 0   & 0   & 0   \\
+0   & 0   & 0   & 0.6 & 0   & 0   & 0   & 0   & 0.4 & 0   & 0   & 0   \\
+0   & 0   & 0   & 0   & 0.6 & 0   & 0   & 0   & 0   & 0.4 & 0   & 0   \\
+0   & 0   & 0   & 0   & 0.6 & 0   & 0   & 0.4 & 0   & 0   & 0   & 0   \\
+0   & 0   & 0   & 0   & 0   & 0   & 0.6 & 0   & 0.4 & 0   & 0   & 0   \\
+0   & 0   & 0   & 0   & 0   & 0   & 0   & 0.6 & 0   & 0.4 & 0   & 0   \\
+0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0.6 & 0   & 0.4 & 0   \\
+0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0.6 & 0   & 0.4 \\
+0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 1
+\end{bmatrix}
+\end{align}
+
+If we raise this matrix to the 5\textsuperscript{th} power, then we obtain the
+probability distribution for what group number this $\sigma$ has at the end of the
+window (fig 2).
+
+\begin{figure*}[b]
+  \caption{Probability distribution of the Markov Chain after 5 moves}
+\begin{align}
+     \setlength{\arraycolsep}{2.5pt}
+    \begin{bmatrix}
+  \emptyset & (3,0) & (3,1) & (2,0) & (2,1) & (2,2) & (1,0) & (1,1) & (1,2) & (1,3) & (1,4) & (1,5) \\
+0.07776 & 0.10368 & 0.22464 & 0.06912 & 0.13824 & 0.06912 & 0 & 0.1152 & 0.06912 & 0.10752 & 0.01536 & 0.01024 \\
+0 & 0 & 0.23328 & 0 & 0.24192 & 0 & 0 & 0.288 & 0 & 0.2112 & 0 & 0.0256 \\
+0 & 0.18144 & 0 & 0.10368 & 0 & 0.12096 & 0.1728 & 0 & 0.31104 & 0 & 0.08448 & 0.0256 \\
+0 & 0 & 0.23328 & 0 & 0.1728 & 0 & 0 & 0.35712 & 0 & 0.2112 & 0 & 0.0256 \\
+0 & 0.07776 & 0 & 0.20736 & 0 & 0.05184 & 0.1728 & 0 & 0.38016 & 0 & 0.08448 & 0.0256 \\
+0 & 0 & 0.07776 & 0 & 0.2592 & 0 & 0 & 0.31104 & 0 & 0.24192 & 0 & 0.11008 \\
+0 & 0 & 0.1296 & 0 & 0.27648 & 0 & 0 & 0.35712 & 0 & 0.2112 & 0 & 0.0256 \\
+0 & 0.07776 & 0 & 0.10368 & 0 & 0.05184 & 0.27648 & 0 & 0.38016 & 0 & 0.08448 & 0.0256 \\
+0 & 0 & 0.07776 & 0 & 0.15552 & 0 & 0 & 0.41472 & 0 & 0.24192 & 0 & 0.11008 \\
+0 & 0 & 0 & 0.07776 & 0 & 0 & 0.20736 & 0 & 0.36288 & 0 & 0.1152 & 0.2368 \\
+0 & 0 & 0 & 0 & 0.07776 & 0 & 0 & 0.20736 & 0 & 0.1728 & 0 & 0.54208 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1
+\end{bmatrix}
+\end{align}
+\end{figure*}
+
+This is powerful \textit{because} window lengths are chosen in advance, which means a
+table of values can be given to the switch with precomputed boundary
+rates for each group.  An example of this could be for each group $x$, two values
+$x_A,x_B$ are defined where if some $\sigma$ ends a window in group $x$, the 
+probability that $\sigma$'s rate is between $x_A,x_B$ is bounded by some constant.
+
+\subsection{Experimental Results}
+Here, we examine the results of simulation that are presented in figure 3.  Of 
+particular interest is how separated $\sigma_1,\sigma_2$ are from the other types in 
+their group numbers;  This is consistent with the design goals of the streaming algorithm.  As an example, take $\sigma_2,\sigma_3$.  In the probability distribution
+for generating packets, $\sigma_2$ is \textit{eight times more likely to occur} than
+$\sigma_3$, and while the buffer values at the end of the window are not always different, $\sigma_2$'s group number is noticeably far from $\sigma_3$'s group number.
+
+Similarly, while $\sigma_1$'s group number is not always extremely far away from the
+other $\sigma$ group numbers, it does end up being further away and thus it is easy to distinguish that $\sigma_1$ has a higher rate when comparing it to $\sigma_0, \sigma_3, \sigma_4, \sigma_5$.
+
+For the rest of the $\sigma$ types, they have comparatively similar rates, and as such their group numbers cluster together even when their buffers differ in value.
+
+I do think in general there is room for improvement in how the buffers of each of these packet types are used, this idea will be detailed in the future work section.
+
+\begin{figure*}[b]
+  \caption{Plot of Statistics of each Packet Type in Sketches over 200 Windows}
+    \includesvg[width=\textwidth]{./prog/plot}
+\end{figure*}
+
+% summary, conclusions, future work
+\section{Conclusions}
+In this project, a novel streaming algorithm using a sketch was created.  This algorithm was designed to separate packets into different groups based upon how often they occur and their ordering, which roughly separates them according to their probability distributions.  Some theoretical properties of this algorithm were shown, as well as results from simulation.  These results from simulation did show that packets were roughly grouped by their actual probabilities.
+
+\section{Future Work}
+There are a few different directions that can be taken when considering future work.  Assuming I am not able to finish the P4 implementation before the end of the semester, that would be an obvious first step.  Apart from that, one such area is with adaptively changing the group number maximums of a sketch between window.  This could be done in cases where a large number of packet types end up bunched together at some point along the interval for a particular group.  Another is using the end sketch of one window as input when initially setting up the next window's sketch, rather than building it up at each window.
+
+In terms of improving how the buffers are used in the sketch, I do have an idea that I haven't had the time to analyze yet;  In order to get better mixing of group numbers, I had an idea where depending on the group number that a packet has, that would determine how much is added to a buffer when it appears.  Initially, one would probably think that this would be to add more to the buffer when the group number gets smaller, but I think doing the opposite (having a higher amount added to the buffer when the group number is higher) would show a larger spread of groups over the long term.  This is because when packets are higher rate, they occur more often, and so in order for it to maintain a group number it needs less added to the buffer \textit{because} of how much more often it occurs, whereas a packet type that occurs much more rarely would need more added to the buffer to keep its position relatively stable.  This would make the math behind the model much more complicated, but has the added benefit that in a sample Markov chain for this, each state has a larger amount of group and buffer combinations that are possible.  In addition, one could also add other restrictions on when group numbers are able to move to lower numbers, but I think that may be adding too much complexity and would be overkill.
+
+There is also a question on if there is a streaming algorithm that would work if the time should be changed from counting packets to something that includes the timing dynamics of \textit{when} packets arrive, not just the order.  This is something that would be possible to model potentially using something like a Stochastic-Time Petri Net (STPN), though there are far more complications that arise when doing this.  The mathematics and tools to analyze these systems\cite{HORVATH2012315}\cite{oris} are far more complex and underdeveloped in comparison to classic Markovian models, and so while I am not sure if this is a promising direction, it is something that could be explored.
+
+\bibliographystyle{ieeetr}
+\bibliography{refs}
+
+Link to GitHub:  This report (and other material) can be found at \url{https://github.com/ARandomCl0wn/adv-comp-net_sketch}
+
+\end{document}

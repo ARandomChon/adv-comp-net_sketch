@@ -1,0 +1,136 @@
+@misc{count-min,
+      title={Count-Min sketches for Telemetry: analysis of performance in P4 implementations}, 
+      author={José A. Hernández and Davide Scano and Filippo Cugini and Gonzalo Martínez and Natalia Koneva and Alvaro Sánchez-Macián and Óscar González de Dios},
+      year={2024},
+      eprint={2406.12586},
+      archivePrefix={arXiv},
+      primaryClass={cs.NI},
+      url={https://arxiv.org/abs/2406.12586}, 
+}
+
+@ARTICLE{per-flow,
+  author={Gu, Liyuan and Tian, Ye and Chen, Wei and Wei, Zhongxiang and Wang, Cenman and Zhang, Xinming},
+
+  journal={IEEE/ACM Transactions on Networking}, 
+
+  title={Per-Flow Network Measurement With Distributed Sketch}, 
+
+  year={2024},
+
+  volume={32},
+
+  number={1},
+
+  pages={411-426},
+
+  keywords={Switches;Data centers;Particle measurements;Hardware;Atmospheric measurements;Distributed databases;Control systems;Per-flow network measurement;distributed sketch;programmable switch;network collaboration},
+
+  doi={10.1109/TNET.2023.3286879}}
+
+@article{p4,
+author = {Bosshart, Pat and Daly, Dan and Gibb, Glen and Izzard, Martin and McKeown, Nick and Rexford, Jennifer and Schlesinger, Cole and Talayco, Dan and Vahdat, Amin and Varghese, George and Walker, David},
+title = {P4: programming protocol-independent packet processors},
+year = {2014},
+issue_date = {July 2014},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {44},
+number = {3},
+issn = {0146-4833},
+url = {https://doi.org/10.1145/2656877.2656890},
+doi = {10.1145/2656877.2656890},
+abstract = {P4 is a high-level language for programming protocol-independent packet processors. P4 works in conjunction with SDN control protocols like OpenFlow. In its current form, OpenFlow explicitly specifies protocol headers on which it operates. This set has grown from 12 to 41 fields in a few years, increasing the complexity of the specification while still not providing the flexibility to add new headers. In this paper we propose P4 as a strawman proposal for how OpenFlow should evolve in the future. We have three goals: (1) Reconfigurability in the field: Programmers should be able to change the way switches process packets once they are deployed. (2) Protocol independence: Switches should not be tied to any specific network protocols. (3) Target independence: Programmers should be able to describe packet-processing functionality independently of the specifics of the underlying hardware. As an example, we describe how to use P4 to configure a switch to add a new hierarchical label.},
+journal = {SIGCOMM Comput. Commun. Rev.},
+month = jul,
+pages = {87–95},
+numpages = {9},
+keywords = {sdn, reconfigurability, protocol-independent, p4}
+}
+
+@inproceedings{stats101,
+author = {Gao, Sam and Handley, Mark and Vissicchio, Stefano},
+title = {Stats 101 in P4: Towards In-Switch Anomaly Detection},
+year = {2021},
+isbn = {9781450390873},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3484266.3487370},
+doi = {10.1145/3484266.3487370},
+abstract = {Data plane programmability is greatly improving network monitoring. Most new proposals rely on controllers pulling information (e.g., sketches or packets) from the data plane. This architecture is not a good fit for tasks requiring high reactivity, such as failure recovery, attack mitigation, and so on. Focusing on these tasks, we argue for a different architecture, where the data plane autonomously detects anomalies and pushes alerts to the controller. As a first step, we demonstrate that statistical checks can be implemented in P4 by revisiting definition and online computation of statistical measures. We collect our techniques in a P4 library, and showcase how they enable in-switch anomaly detection.},
+booktitle = {Proceedings of the 20th ACM Workshop on Hot Topics in Networks},
+pages = {84–90},
+numpages = {7},
+location = {Virtual Event, United Kingdom},
+series = {HotNets '21}
+}
+
+@article{SHAFFER2013967,
+title = {Linear recruitment leads to allocation and flexibility in collective foraging by ants},
+journal = {Animal Behaviour},
+volume = {86},
+number = {5},
+pages = {967-975},
+year = {2013},
+issn = {0003-3472},
+doi = {https://doi.org/10.1016/j.anbehav.2013.08.014},
+url = {https://www.sciencedirect.com/science/article/pii/S0003347213003825},
+author = {Zachary Shaffer and Takao Sasaki and Stephen C. Pratt},
+keywords = {ant, collective foraging, communication, cooperation, decision making, linear recruitment, tandem running, },
+abstract = {Positive feedback in communication is central to the emergence of collective behaviour in animal groups. The nonlinearity hypothesis predicts that group behaviour will be defined in large part by the degree of cooperative interaction in this feedback. Strong interactions mean that the effectiveness of communication grows nonlinearly with signal quantity, leading to robust spatial patterning and consensus decision making. These predictions have been supported in many experimental systems, but the corresponding behaviour of linear systems, where signal effectiveness is proportional to signal quantity, has not been well explored. We examined the consequences of tandem running, a linear method of recruitment, for collective decision making by foraging colonies of the ant Temnothorax rugatulus. We found that colonies collectively chose the better of two unequal feeders, but they allocated foragers equally when feeders were identical. This result accords with theoretical predictions and contrasts with symmetry breaking seen in species with highly nonlinear trail pheromone recruitment. Colonies were also able to reallocate foragers when the quality of two unequal feeders was switched, again in accord with theoretical expectations. We built a model based upon the behaviour of individual ants and found that colony-level qualities of choice, allocation and flexibility can be predicted by two behaviours: quality-dependent linear recruitment and quality-dependent attrition. These experiments are the first thorough investigation of the consequences of linear recruitment for collective animal behaviour.}
+}
+
+@inproceedings{noga,
+author = {Alon, Noga and Matias, Yossi and Szegedy, Mario},
+title = {The space complexity of approximating the frequency moments},
+year = {1996},
+isbn = {0897917855},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/237814.237823},
+doi = {10.1145/237814.237823},
+booktitle = {Proceedings of the Twenty-Eighth Annual ACM Symposium on Theory of Computing},
+pages = {20–29},
+numpages = {10},
+location = {Philadelphia, Pennsylvania, USA},
+series = {STOC '96}
+}
+
+@misc{cms,
+  title={Count-Min Sketch.},
+  author={Cormode, Graham},
+  year={2009}
+}
+
+@misc{sketch,
+  title={Notes on Sketching and Streaming},
+  author={Jelani Nelson},
+  year={2016},
+  url={https://people.eecs.berkeley.edu/~minilek/tum2016/index.html}
+}
+
+@article{oris,
+  title={The ORIS tool: quantitative evaluation of non-Markovian systems},
+  author={Paolieri, Marco and Biagi, Marco and Carnevali, Laura and Vicario, Enrico},
+  journal={IEEE Transactions on Software Engineering},
+  volume={47},
+  number={6},
+  pages={1211--1225},
+  year={2019},
+  publisher={IEEE}
+}
+
+@article{HORVATH2012315,
+title = {Transient analysis of non-Markovian models using stochastic state classes},
+journal = {Performance Evaluation},
+volume = {69},
+number = {7},
+pages = {315-335},
+year = {2012},
+note = {Selected papers from QEST 2010},
+issn = {0166-5316},
+doi = {https://doi.org/10.1016/j.peva.2011.11.002},
+url = {https://www.sciencedirect.com/science/article/pii/S0166531611001520},
+author = {András Horváth and Marco Paolieri and Lorenzo Ridi and Enrico Vicario},
+keywords = {Generalised Semi Markov Process, Markov Regenerative Process, Transient analysis, Non-Markovian Stochastic Petri Net, Stochastic Time Petri Net, Stochastic state class},
+abstract = {The method of stochastic state classes approaches the analysis of Generalised Semi Markov Processes (GSMPs) through the symbolic derivation of probability density functions over supports described by Difference Bounds Matrix (DBM) zones. This makes steady state analysis viable, provided that at least one regeneration point is visited by every cyclic behaviour of the model. We extend the approach providing a way to derive transient probabilities. To this end, stochastic state classes are extended with a supplementary timer that enables the symbolic derivation of the distribution of time at which a class can be entered. The approach is amenable to efficient implementation when model timings are given by expolynomial distributions, and it can be applied to perform transient analysis of GSMPs within any given time bound. In the special case of models underlying a Markov Regenerative Process (MRGP), the method can also be applied to the symbolic derivation of local and global kernels, which in turn provide transient probabilities through numerical integration of generalised renewal equations. Since much of the complexity of this analysis is due to the local kernel, we propose a selective derivation of its entries depending on the specific transient measure targeted by the analysis.}
+}
